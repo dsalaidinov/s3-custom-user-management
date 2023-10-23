@@ -1,0 +1,29 @@
+{
+  "name": "s3-usermanager-backend",
+  "version": "1.0.0",
+  "description": "s3 user manager backend service",
+  "main": "server.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edgarmoarmask/s3-usermanager-backend.git"
+  },
+  "keywords": [
+    "s3-usermanager-service"
+  ],
+  "author": "Daniiar Salaidinuulu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/edgarmoarmask/s3-usermanager-backend/issues"
+  },
+  "homepage": "https://github.com/edgarmoarmask/s3-usermanager-backend#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.6.3"
+  }
+}
