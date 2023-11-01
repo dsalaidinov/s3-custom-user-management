@@ -3,10 +3,11 @@ import {
   createS3System,
   getS3Systems,
 } from '../controllers/s3system.controller';
+import { isAdmin } from '../middleware/isAdmin';
 
 const router = express.Router();
 
-router.post('/s3systems', createS3System); 
-router.get('/s3systems', getS3Systems); 
+router.post('/create', isAdmin, createS3System); 
+router.get('/list', isAdmin, getS3Systems); 
 
 export default router;

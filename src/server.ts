@@ -16,6 +16,7 @@ import compression from 'compression';
 import resourceRoutes from './routes/resource.routes';
 import auth from './routes/auth';
 import s3SystemRoutes from './routes/s3system.routes';
+import { initializeAdmin } from './initAdmin';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -32,15 +33,16 @@ app.use(bodyParser.json());
 // mongoose.set('useUnifiedTopology', true);
 // mongoose.set('useCreateIndex', true);
 
-app.use('/auth', auth);
-app.use('/resources', resourceRoutes);
-app.use('/s3Systems', s3SystemRoutes);
+app.use('/api/auth', auth);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/s3Systems', s3SystemRoutes);
 
 
 // Connect to MongoDB
 mongoose.connect(`mongodb://${process.env.DB_HOST}/${process.env.DB_NAME}`)
   .then(() => {
     console.log('Connected to MongoDB');
+    initializeAdmin();
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);

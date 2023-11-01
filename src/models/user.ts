@@ -1,22 +1,22 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
+enum UserRole {
+  Admin = 'admin',
+  User = 'user',
+}
+
 export interface IUser extends Document {
   username: string;
   password: string;
-  roles: Types.ObjectId[];
+  role: UserRole;
   accessPolicies: Types.ObjectId[];
-  s3systems: Types.ObjectId[]; // Связь с системами S3
-  authentification: {};
+  s3systems: Types.ObjectId[];
 }
 
 const userSchema = new Schema<IUser>({
   username: { type: String, unique: true, required: true },
-  roles: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Role',
-    },
-  ],
+  password: { type: String, required: true, select: false },
+  role: { type: String, enum: Object.values(UserRole), default: UserRole.User },
   accessPolicies: [
     {
       type: Schema.Types.ObjectId,
@@ -29,11 +29,6 @@ const userSchema = new Schema<IUser>({
       ref: 'S3System',
     },
   ],
-  authentification: {
-    password: { type: String, required: true, select: false },
-    sald: { type: String, select: false },
-    sessionToken: { type: String, select: false },
-  },
 });
 
 const User = mongoose.model<IUser>('User', userSchema);

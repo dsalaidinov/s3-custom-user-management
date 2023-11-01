@@ -1,14 +1,14 @@
-// auth.ts
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import User, { IUser } from '../models/user';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'yourSecretKey';
+
 const generateToken = (user: IUser) => {
-  const secret = process.env.JWT_SECRET || 'yourSecretKey';
-  return jwt.sign({ id: user._id, username: user.username }, secret, {
-    expiresIn: '1h',
-  });
+  const payload = { id: user._id, username: user.username };
+  const options = { expiresIn: '1h' };
+  return jwt.sign(payload, JWT_SECRET, options);
 };
 
 export const register = async (req: Request, res: Response) => {
@@ -20,18 +20,21 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const newUser = new User({
-      username,
+      username,        
       password: hashedPassword,
     });
 
     const user = await newUser.save();
+
     const token = generateToken(user);
 
     res.status(201).json({ user, token });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
@@ -55,6 +58,7 @@ export const login = async (req: Request, res: Response) => {
 
     res.status(200).json({ user, token });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
