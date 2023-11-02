@@ -3,7 +3,7 @@ import S3System, { S3SystemDocument } from '../models/s3systems';
 
 export const createS3System = async (req: Request, res: Response) => {
   try {
-    const { name, type, accessKey, secretKey, region, endpoint } = req.body;
+    const { name, type, accessKey, secretKey, region, endpoint, port, useSSL } = req.body;
     
     const newS3System: S3SystemDocument = new S3System({
       name,
@@ -12,6 +12,8 @@ export const createS3System = async (req: Request, res: Response) => {
       secretKey,
       region,
       endpoint,
+      port,
+      useSSL
     });
 
     await newS3System.save();

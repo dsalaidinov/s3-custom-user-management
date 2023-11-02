@@ -7,7 +7,7 @@ enum UserRole {
 
 export interface IUser extends Document {
   username: string;
-  password: string;
+  password?: string;
   role: UserRole;
   accessPolicies: Types.ObjectId[];
   s3systems: Types.ObjectId[];
@@ -15,7 +15,7 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>({
   username: { type: String, unique: true, required: true },
-  password: { type: String, required: true, select: false },
+  password: { type: String, required: true, select: true },
   role: { type: String, enum: Object.values(UserRole), default: UserRole.User },
   accessPolicies: [
     {

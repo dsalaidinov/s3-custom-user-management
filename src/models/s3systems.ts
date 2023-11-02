@@ -1,8 +1,8 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export enum S3SystemType {
-  AmazonS3 = 'Amazon S3',
-  S3Compatible = 'S3-Compatible',
+  AmazonS3 = 'AmazonS3',
+  S3Compatible = 'S3Compatible',
 }
 
 export interface S3SystemDocument extends Document {
@@ -12,6 +12,8 @@ export interface S3SystemDocument extends Document {
   secretKey: string;
   region?: string;
   endpoint?: string;
+  port?: string;
+  useSSL?: boolean;
 }
 
 const s3SystemSchema = new Schema<S3SystemDocument>({
@@ -21,6 +23,8 @@ const s3SystemSchema = new Schema<S3SystemDocument>({
   secretKey: { type: String, required: true },
   region: { type: String },
   endpoint: { type: String },
+  port: { type: String },
+  useSSL: { type: Boolean },
 });
 
 const S3System = mongoose.model<S3SystemDocument>('S3System', s3SystemSchema);

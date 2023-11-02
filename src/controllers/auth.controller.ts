@@ -1,9 +1,16 @@
 import { Request, Response } from 'express';
+import * as dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import User, { IUser } from '../models/user';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'yourSecretKey';
+if (process.env.NODE_ENV === 'development') {
+  dotenv.config({ path: '.development.env' });
+} else {
+  dotenv.config({ path: '.production.env' });
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'secret_secret_sdjflgkldfjg';
 
 const generateToken = (user: IUser) => {
   const payload = { id: user._id, username: user.username };
@@ -47,16 +54,16 @@ export const login = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(400).json({ message: 'User does not exist' });
     }
-
+   
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
-
+   
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const token = generateToken(user);
 
-    res.status(200).json({ user, token });
+    res.status(200).json({ user: { username: user.username, role: user.role, accessPolicies: user.accessPolicies, s3systems: user.s3systems }, token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Something went wrong' });

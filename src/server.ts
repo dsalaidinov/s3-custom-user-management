@@ -15,6 +15,7 @@ import compression from 'compression';
 
 import resourceRoutes from './routes/resource.routes';
 import auth from './routes/auth';
+import bucketRoutes from './routes/bucket.routes';
 import s3SystemRoutes from './routes/s3system.routes';
 import { initializeAdmin } from './initAdmin';
 
@@ -35,7 +36,8 @@ app.use(bodyParser.json());
 
 app.use('/api/auth', auth);
 app.use('/api/resources', resourceRoutes);
-app.use('/api/s3Systems', s3SystemRoutes);
+app.use('/api/buckets', bucketRoutes);
+app.use('/api/s3-systems', s3SystemRoutes);
 
 
 // Connect to MongoDB
