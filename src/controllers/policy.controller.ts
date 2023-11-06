@@ -22,3 +22,12 @@ export const assignAccess = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error assigning access' });
   }
 };
+
+export const getAssings = async (req: Request, res: Response) => {
+  try {
+    const policies = await AccessPolicy.find();
+    return res.status(200).json(policies);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch policies' });
+  }
+};

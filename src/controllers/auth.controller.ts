@@ -14,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret_secret_sdjflgkldfjg';
 
 const generateToken = (user: IUser) => {
   const payload = { id: user._id, username: user.username };
-  const options = { expiresIn: '1h' };
+  const options = { expiresIn: '8h' };
   return jwt.sign(payload, JWT_SECRET, options);
 };
 
