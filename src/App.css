@@ -1,0 +1,112 @@
+.p-treetable .object-tree-table .object-tree-row td{
+    height: 48px;
+    padding: 0;
+}
+
+.p-treetable.object-tree-table .p-treetable-tbody > tr > td{
+    height: 48px;
+    padding: .1rem;
+}
+
+.buckets-container {
+    flex: 1;
+    border: 1px solid #CECEEC;
+    border-radius: 5px;
+    max-width: 28%;
+    overflow-y: auto;
+  }
+  
+  .content-container {
+    flex: 1;
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-left: 20px;
+    background-color: #f8f8f8; /* Задайте нужный фон для правой части */
+  }
+
+  .buckets-container > .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.5rem 0.5rem;
+  }
+
+  .table-cell-vertical-align {
+    display: flex;
+    align-items: center;
+  }
+  
+  .edit-user-dialog {
+    .p-field {
+      margin-bottom: 1rem;
+    }
+  
+    .p-inputtext {
+      width: 100%;
+    }
+  }
+  
+.container {
+  display: flex;
+}
+
+.bucket-list {
+  width: 200px;
+  padding: 20px;
+  background-color: #f0f0f0;
+}
+
+.bucket-list ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bucket-list li {
+  cursor: pointer;
+  padding: 5px;
+}
+
+.bucket-list li:hover {
+  background-color: #ddd;
+}
+
+.bucket-content {
+  padding: 20px;
+  flex-grow: 1;
+}
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
+.login-form {
+  width: 300px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 20px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.login-page .logo {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.login-page .form-field {
+  margin-bottom: 15px;
+}
+
+.login-form .p-inputtext {
+  width: 100%;
+  text-align: center;
+}
+
+.form-field button.p-button.p-component {
+  width: 100%;
+  background-color: #277cbc;
+}
