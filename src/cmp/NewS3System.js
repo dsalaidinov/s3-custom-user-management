@@ -109,7 +109,7 @@ const NewS3System = ({ visible, onHide, onS3SystemCreated }) => {
               options={SystemTypes} 
               optionLabel="text"
               optionValue="value"
-              placeholder="Select a City" 
+              placeholder="Select type" 
               className="w-full md:w-14rem" 
             />
           </div>

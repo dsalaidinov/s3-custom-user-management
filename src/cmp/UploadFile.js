@@ -7,12 +7,16 @@ import { Message } from 'primereact/message';
 import { Toast } from "primereact/toast";
 import { ProgressBar } from 'primereact/progressbar';
 import useToast from "../cmp/useToast";
+import axiosClient from "../util/axiosClient";
 let fileReaderStream = require("filereader-stream");
 
 const UploadFile = ({ bucketName, pathPrefix = "", onRefresh, visible, setOpened }) => {
   const [value, setValue] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const user = JSON.parse(localStorage.getItem('user'))?.user;
+  const isAdmin = user.role === "admin";
+  const systemId = isAdmin ? localStorage.getItem("s3system") : user.s3systems;
 
   const handleChange = (event) => {
     setValue(event.target.files);
@@ -23,37 +27,44 @@ const UploadFile = ({ bucketName, pathPrefix = "", onRefresh, visible, setOpened
   // eslint-disable-next-line no-unused-vars
   const [targetPrefix, setTargetPrefix] = useState(pathPrefix);
 
-  const uploadFiles = () => {
+  const uploadFiles = async () => {
     const filesList = Array.from(value);
     setUploadProgress(1);
+  
+    try {
+      await Promise.all(
+        filesList.map(async (file) => {
+          const { name: fileName } = file;
+  
+          const formData = new FormData();
+          formData.append('s3System', systemId);
+          formData.append('bucketName', bucketName);
+          formData.append('prefix', targetPrefix);
+          formData.append('file', file);
+  
+          const response = await axiosClient.post('/buckets/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+              const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              setUploadProgress(progress);
+            },
+          });
 
-    filesList.map(async (file) => {
-      const { name: fileName } = file;
-
-      let readStream = fileReaderStream(file);
-      console.log("targetPrefix", targetPrefix)
-      mc.putObject(
-        bucketName,
-        `${pathPrefix ? pathPrefix : ""}${fileName}`,
-        readStream,
-        {
-          "Content-Type": file.type,
-          "X-Amz-Meta-App": "SPH-REACT-JS",
-        },
-        (error, data) => {
-          if (error) {
-            setOpened(false);
-            showError(error.message);
-            console.log(error);
-          } else {
-            setUploadProgress(0);
-            showSuccess(`Successfully uploaded ${fileName}`);
-            onRefresh();
-          }
-        }
+          showSuccess(`Successfully uploaded ${filesList.length} file(s)`);
+          onRefresh();
+        })
       );
-    });
-
+    } catch (error) {
+      setOpened(false);
+      showError(error?.message);
+    } finally {
+      setUploadProgress(100);
+      setTimeout(() => {
+        setUploadProgress(0);
+      }, 1000);
+    }
   };
 
   const handleDrop = (event) => {
@@ -67,6 +78,7 @@ const UploadFile = ({ bucketName, pathPrefix = "", onRefresh, visible, setOpened
   const handleOnHide = () => {
     setOpened(false);
     setValue([]);
+    setUploadProgress(0);
   }
 
   return (
@@ -86,7 +98,7 @@ const UploadFile = ({ bucketName, pathPrefix = "", onRefresh, visible, setOpened
 
         >
           <div className="flex flex-col gap-3 ">
-            {value.length ? <Message severity="success" text="File added" /> : ''}
+            {value.length ? <Message severity="success" text="File attached" /> : ''}
             <div className="flex items-center justify-center w-full">
               <label
                 htmlFor="dropzone-file"
@@ -124,12 +136,12 @@ const UploadFile = ({ bucketName, pathPrefix = "", onRefresh, visible, setOpened
               </label>
             </div>
 
-            {uploadProgress ? <ProgressBar mode="indeterminate" style={{ height: '6px' }}></ProgressBar> : ''}
-
+            {uploadProgress ? <ProgressBar value={uploadProgress}></ProgressBar> : ''}
+            <span>{uploadProgress && 'Complete'}</span>
             <div className="flex items-center justify-center">
               <Button
                 label="Upload"
-                disabled={Number(value.length) === 0}
+                disabled={Number(value.length) === 0 || uploadProgress === 100}
                 type="submit"
                 className="h-12 bg-blue-800 border border-gray-100 w-24 text-white rounded"
               />

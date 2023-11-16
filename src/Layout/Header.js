@@ -19,14 +19,6 @@ const Header = () => {
             className="hidden fixed  bg-gray-800 z-50
                 md:relative md:flex md:p-4 md:bg-transparent md:flex-row md:space-x-6"
           >
-            {isAdmin && (<li className="p-1 flex items-center">
-              <Link
-                className="text-white opacity-75 hover:opacity-100 duration-300 border-gray-200 p-1 flex items-center"
-                to="/s3systems"
-              >
-                S3 Systems
-              </Link>
-            </li>)}
             <li className="p-1 flex items-center">
               <Link
                 className="text-white opacity-75 hover:opacity-100 duration-300 border-gray-200 p-1 flex items-center"
@@ -35,6 +27,14 @@ const Header = () => {
                 Buckets
               </Link>
             </li>
+            {isAdmin && (<li className="p-1 flex items-center">
+              <Link
+                className="text-white opacity-75 hover:opacity-100 duration-300 border-gray-200 p-1 flex items-center"
+                to="/s3systems"
+              >
+                S3 Systems
+              </Link>
+            </li>)}
             {isAdmin && (<li className="p-1 flex items-center">
               <Link
                 className="text-white opacity-75 hover:opacity-100 duration-300 border-gray-200 p-1 flex items-center"

@@ -10,6 +10,9 @@ import { downloadFile, getFileData } from "../util/util";
 const FileDetailsDialog = ({ bucket, path, visible, onHide, file }) => {
   const url = `${path}${file?.name}`;
   const [fileData, setFileData] = useState(null);
+  const user = JSON.parse(localStorage.getItem('user'))?.user;
+  const isAdmin = user.role === "admin";
+  const systemId = isAdmin ? localStorage.getItem("s3system") : user.s3systems;
 
   const handleReadFile = (data) => {
     setFileData(data);
@@ -17,7 +20,7 @@ const FileDetailsDialog = ({ bucket, path, visible, onHide, file }) => {
 
   useEffect(() => {
     if (!file?.isDir) {
-      visible && getFileData(bucket, url, handleReadFile);
+      visible && getFileData(bucket, url, systemId, user._id, handleReadFile);
     }
   }, [bucket, url, file, visible]);
 
@@ -44,7 +47,7 @@ const FileDetailsDialog = ({ bucket, path, visible, onHide, file }) => {
 
         <Button
           style={{ backgroundColor: '#277cbc' }}
-          onClick={() => downloadFile(bucket, url)}
+          onClick={() => downloadFile(bucket, url, systemId, user._id)}
           icon="pi pi-download" iconPos="right"
         />
 

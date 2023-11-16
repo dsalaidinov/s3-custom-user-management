@@ -21,131 +21,186 @@ import UploadFile from "./UploadFile";
 import NewPolicy from "./NewPolicy";
 import { getUserPermissions } from "./permissions";
 import FileDetailsDialog from './FileDetailsDialog';
-
-const username = localStorage.getItem("username");
-const isAdmin = username === "admin";
+import axiosClient from "../util/axiosClient";
 
 setChonkyDefaults({ iconComponent: ChonkyIconFA });
 
+const user = JSON.parse(localStorage.getItem('user'))?.user;
+const isAdmin = user.role === "admin";
 const FOLDER_PREFIX = "";
 
-const fetchS3BucketContents = (bucket, prefix) => {
-  return new Promise(async (resolve, reject) => {
-    const files = [];
+// const fetchS3BucketContents = (bucket, prefix) => {
+//   return new Promise(async (resolve, reject) => {
+//     const files = [];
 
-    try {
-      const userPermissions = await getUserPermissions();
+//     try {
+//       const userPermissions = await getUserPermissions();
 
-      mc?.listObjects(bucket, prefix, false)
-        .on("data", (obj) => {
-          console.log(obj)
-          const isDir = obj?.name?.endsWith("/") || obj?.prefix?.endsWith("/");
-          const name = isDir
-            ? obj?.prefix
-              ? obj?.prefix?.slice(0, -1)
-              : obj?.name?.slice(0, -1)
-            : obj?.name;
-          const id = isDir
-            ? `${obj?.prefix ? obj?.prefix : obj?.name}`
-            : path?.join(prefix, name);
+//       mc?.listObjects(bucket, prefix, false)
+//         .on("data", (obj) => {
+//           console.log(obj)
+//           const isDir = obj?.name?.endsWith("/") || obj?.prefix?.endsWith("/");
+//           const name = isDir
+//             ? obj?.prefix
+//               ? obj?.prefix?.slice(0, -1)
+//               : obj?.name?.slice(0, -1)
+//             : obj?.name;
+//           const id = isDir
+//             ? `${obj?.prefix ? obj?.prefix : obj?.name}`
+//             : path?.join(prefix, name);
 
+//           let formattedName;
+
+//           if (isDir && !prefix) {
+//             const formattedName = obj?.prefix
+//               ? obj?.prefix?.slice(0, obj?.prefix.length - 1)
+//               : obj?.name?.slice(0, obj?.name.length - 1);
+//             files.push({ id, name: formattedName, isDir: true });
+//           } else if (isDir && prefix) {
+//             const formattedName = obj?.prefix
+//               ? obj?.prefix?.slice(prefix.length, obj?.prefix.length - 1)
+//               : obj?.name?.slice(0, obj?.name.length - 1);
+
+//             if (prefix !== obj?.name) {
+//               files.push({ id, name: formattedName, isDir: true });
+//             }
+//           } else if (!isDir && prefix) {
+//             if (name?.includes("/")) {
+//               const formattedName = obj?.name?.slice(prefix.length);
+//               files.push({ id, name: formattedName, isDir: false, size: obj.size, lastModified: `${new Date(obj.lastModified).toLocaleString()}` });
+//             }
+//           } else if (!isDir && !prefix) {
+//             const formattedName = path?.basename(name);            
+//             files.push({ id, name: formattedName, isDir: false, size: obj.size, lastModified: `${new Date(obj.lastModified).toLocaleString()}` });
+//           }
+//         })
+//         .on("end", () => {
+//           const filteredObjects = files.filter((object) => {
+//             if (userPermissions?.permissions["arn:aws:s3:::*"]) {
+//               return object;
+//             } else {
+//               if (object.id !== undefined) {
+//                 const objectArn = `arn:aws:s3:::${bucket}/${
+//                   object.isDir ? object.id : object.id.slice(prefix.length)
+//                 }`;
+//                 const bucketArn = `arn:aws:s3:::${bucket}`;
+
+//                 const objectPermissions =
+//                   (userPermissions.permissions.hasOwnProperty(objectArn) &&
+//                     userPermissions.permissions[objectArn]) ||
+//                   [];
+//                 const isFolder = object.isDir;
+//                 if (isFolder) {
+//                   const hasAccessToFolder = userPermissions["allowResources"]
+//                     ? userPermissions["allowResources"]?.some((resource) => {
+//                         const checkResource = resource.prefixes.filter(
+//                           (res) => res === object.id
+//                         );
+
+//                         if (checkResource) {
+//                           return object.isDir
+//                             ? object.id.startsWith(
+//                                 resource.prefixes.filter(
+//                                   (res) => res === object.id
+//                                 )[0]
+//                               )
+//                             : object.name.startsWith(
+//                                 resource.prefixes.filter(
+//                                   (res) => res === object.name
+//                                 )
+//                               );
+//                         } else {
+//                           return false;
+//                         }
+//                       })
+//                     : userPermissions.permissions[bucketArn].includes(
+//                         "s3:ListBucket"
+//                       )
+//                     ? true
+//                     : false;
+
+//                   if (!hasAccessToFolder) {
+//                     return false;
+//                   }
+
+//                   return object;
+//                 } else {
+//                   const hasAccessToFile =
+//                     objectPermissions.includes("s3:GetObject");
+
+//                     if (!hasAccessToFile) {
+//                     return false;
+//                   }
+//                   return true;
+//                 }
+//               }
+//             }
+//           });
+
+//           resolve(filteredObjects);
+//         })
+//         .on("error", (err) => reject(err));
+//     } catch (error) {
+//       console.error("Error listing objects with permissions:", error);
+//       return [];
+//     }
+//     // }
+//   });
+// };
+
+const fetchS3BucketContents = async (bucket, prefix) => {
+  try {
+    const systemId = isAdmin ? localStorage.getItem("s3system") : user.s3systems;
+    const response = await axiosClient.get(`/buckets/list-objects-by-user`, {
+      params: {
+        s3System: systemId,
+        userId: user._id,
+        bucketName: bucket,
+        prefix: prefix || "",
+      },
+    });
+
+    const filteredObjects = response.data || [];
+
+    const filteredFiles = filteredObjects.reduce((files, object) => {
+      const isDir = object?.name?.endsWith("/") || object?.prefix?.endsWith("/");
+      const name = isDir
+        ? object?.prefix
+          ? object?.prefix?.slice(prefix.length, -1)
+          : object?.name?.slice(prefix.length, -1)
+        : object?.name;
+
+      if (name !== "" && name !== ".") {
+        const id = isDir
+          ? `${prefix}${name}`
+          : path?.join(prefix, name);
+
+        if (!files.find((file) => file.id === id)) {
           let formattedName;
 
-          if (isDir && !prefix) {
-            const formattedName = obj?.prefix
-              ? obj?.prefix?.slice(0, obj?.prefix.length - 1)
-              : obj?.name?.slice(0, obj?.name.length - 1);
-            files.push({ id, name: formattedName, isDir: true });
-          } else if (isDir && prefix) {
-            const formattedName = obj?.prefix
-              ? obj?.prefix?.slice(prefix.length, obj?.prefix.length - 1)
-              : obj?.name?.slice(0, obj?.name.length - 1);
-
-            if (prefix !== obj?.name) {
-              files.push({ id, name: formattedName, isDir: true });
-            }
-          } else if (!isDir && prefix) {
-            if (name?.includes("/")) {
-              const formattedName = obj?.name?.slice(prefix.length);
-              files.push({ id, name: formattedName, isDir: false, size: obj.size, lastModified: `${new Date(obj.lastModified).toLocaleString()}` });
-            }
-          } else if (!isDir && !prefix) {
-            const formattedName = path?.basename(name);            
-            files.push({ id, name: formattedName, isDir: false, size: obj.size, lastModified: `${new Date(obj.lastModified).toLocaleString()}` });
+          if (isDir) {
+            formattedName = name;
+          } else {
+            formattedName = path?.basename(name);
           }
-        })
-        .on("end", () => {
-          const filteredObjects = files.filter((object) => {
-            if (userPermissions?.permissions["arn:aws:s3:::*"]) {
-              return object;
-            } else {
-              if (object.id !== undefined) {
-                const objectArn = `arn:aws:s3:::${bucket}/${
-                  object.isDir ? object.id : object.id.slice(prefix.length)
-                }`;
-                const bucketArn = `arn:aws:s3:::${bucket}`;
 
-                const objectPermissions =
-                  (userPermissions.permissions.hasOwnProperty(objectArn) &&
-                    userPermissions.permissions[objectArn]) ||
-                  [];
-                const isFolder = object.isDir;
-                if (isFolder) {
-                  const hasAccessToFolder = userPermissions["allowResources"]
-                    ? userPermissions["allowResources"]?.some((resource) => {
-                        const checkResource = resource.prefixes.filter(
-                          (res) => res === object.id
-                        );
-
-                        if (checkResource) {
-                          return object.isDir
-                            ? object.id.startsWith(
-                                resource.prefixes.filter(
-                                  (res) => res === object.id
-                                )[0]
-                              )
-                            : object.name.startsWith(
-                                resource.prefixes.filter(
-                                  (res) => res === object.name
-                                )
-                              );
-                        } else {
-                          return false;
-                        }
-                      })
-                    : userPermissions.permissions[bucketArn].includes(
-                        "s3:ListBucket"
-                      )
-                    ? true
-                    : false;
-
-                  if (!hasAccessToFolder) {
-                    return false;
-                  }
-
-                  return object;
-                } else {
-                  const hasAccessToFile =
-                    objectPermissions.includes("s3:GetObject");
-
-                    if (!hasAccessToFile) {
-                    return false;
-                  }
-                  return true;
-                }
-              }
-            }
+          files.push({
+            id,
+            name: formattedName,
+            isDir,
+            size: object.size,
+            lastModified: `${new Date(object.lastModified).toLocaleString()}`,
           });
+        }
+      }
 
-          resolve(filteredObjects);
-        })
-        .on("error", (err) => reject(err));
-    } catch (error) {
-      console.error("Error listing objects with permissions:", error);
-      return [];
-    }
-    // }
-  });
+      return files;
+    }, []);
+
+    return filteredFiles;
+  } catch (error) {
+    return [];
+  }
 };
 
 const CreateFolderAction = {
@@ -225,7 +280,7 @@ const S3Browser = ({ bucketName }) => {
     mc.putObject(bucketName, folderKey, "", async (error, data) => {
       if (error) {
         console.log(error);
-        showError(`Error creating folder: ${error.message}`);
+        showError(`Error creating folder: ${error?.message}`);
       } else {
         console.log("Folder created successfully!");
         fetchFolderContents(bucketName, folderPrefix);
@@ -247,7 +302,7 @@ const S3Browser = ({ bucketName }) => {
       setFiles(files);
       showSuccess(`Successfully deleted ${object}`);
     } catch (err) {
-      showError(`Error deleting! ${err.message}`);
+      showError(`Error deleting! ${err?.message}`);
     }
   };
 
@@ -316,7 +371,8 @@ const S3Browser = ({ bucketName }) => {
         const newId = `${folderPrefix}${name}`;
         if (isDir) return;
         const contentType = "application/octet-stream";
-        downloadFile(bucketName, folderPrefix ? newId : id, contentType);
+        const systemId = isAdmin ? localStorage.getItem("s3system") : user.s3systems;
+        downloadFile(bucketName, folderPrefix ? newId : id, systemId, user._id, contentType);
       }
     },
     [setFolderPrefix, fetchFolderContents, bucketName, folderPrefix]
@@ -390,6 +446,7 @@ const S3Browser = ({ bucketName }) => {
       }
 
       if (data.id === "upload_files") {
+        console.log(folderPrefix);
         setOpened(true);
       }
 

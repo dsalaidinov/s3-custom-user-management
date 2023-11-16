@@ -21,14 +21,12 @@ const ListBuckets = () => {
   const userRole = localStorage.getItem('userRole');
   const isAdmin = userRole === 'admin';
 
-  const getBuckets = async (system = currentS3System) => {
+  const getBuckets = async(system = currentS3System) => {
     try {
     const res = await axiosClient.get(`/buckets/list-by-user?s3System=${system}`);
-    console.log(res);
     setBuckets(res.data);
     } catch (error) {
-      console.log(error);
-      showError("Error: ", error.error);
+      error && showError("Error: ", error?.error);
     }
   };
 
@@ -38,7 +36,7 @@ const ListBuckets = () => {
 
       showSuccess("Successfully removed bucket");
     } catch (er) {
-      showError("Tested Error:", er.message);
+      showError("Tested Error:", er?.message);
       console.log("showError");
     }
 
@@ -59,7 +57,7 @@ const ListBuckets = () => {
       <div className="flex justify-between align-items-center gap-10">
         <h5 className="m-0">Buckets</h5>
         <div className="flex items-center gap-2">
-          {isAdmin && <SelectS3System onSelect={handleSelectS3System} />}
+          {<SelectS3System onSelect={handleSelectS3System} />}
           <button
             type="button"
             rounded
@@ -70,7 +68,7 @@ const ListBuckets = () => {
           >
             <i className="pi pi-refresh"></i>
           </button>
-          <NewBucket onRefresh={getBuckets} />
+          {isAdmin && <NewBucket onRefresh={getBuckets} />}
         </div>
       </div>
     );

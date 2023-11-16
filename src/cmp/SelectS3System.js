@@ -10,7 +10,7 @@ const SelectS3System = ({ onSelect }) => {
 
     const fetchS3Systems = async () => {
         try {
-            const response = await axiosClient.get("/s3-systems/list");
+            const response = await axiosClient.get("/s3-systems/list-system-by-user");
             const fetchedS3Systems = response.data;
             setS3Systems(fetchedS3Systems);
         } catch (error) {
