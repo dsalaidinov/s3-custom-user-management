@@ -18,6 +18,9 @@ const generateToken = (user: IUser) => {
   return jwt.sign(payload, JWT_SECRET, options);
 };
 
+const oneDay = 24 * 60 * 60 * 1000;
+const expirationDate = new Date(Date.now() + oneDay);
+
 export const register = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -63,7 +66,14 @@ export const login = async (req: Request, res: Response) => {
 
     const token = generateToken(user);
 
-    res.status(200).json({ user: { username: user.username, role: user.role, accessPolicies: user.accessPolicies, s3systems: user.s3systems }, token });
+    res.cookie('token', token, {
+      // httpOnly: true,
+      sameSite: 'strict', 
+      secure: process.env.NODE_ENV === 'production',
+      expires: expirationDate
+    });
+
+    res.status(200).json({ user: { username: user.username, role: user.role, accessPolicies: user.accessPolicies, s3systems: user.s3systems, _id: user._id }, token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Something went wrong' });

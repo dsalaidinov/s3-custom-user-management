@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import AWS from '@aws-sdk/client-s3';
-import { Client as MinioClient } from 'minio';
-import S3System, { S3SystemType } from '../models/s3systems';
-import AccessPolicy from '../models/access-policy';
-import { Permissions } from '../interface/permissions';
-import { S3Client } from '../config/s3client';
+import { Request, Response } from "express";
+import AWS from "@aws-sdk/client-s3";
+import { Client as MinioClient } from "minio";
+import S3System, { S3SystemType } from "../models/s3systems";
+import AccessPolicy from "../models/access-policy";
+import { Permissions } from "../interface/permissions";
+import { S3Client } from "../config/s3client";
 
 export const createBucket = async (req: Request, res: Response) => {
   try {
@@ -13,11 +13,13 @@ export const createBucket = async (req: Request, res: Response) => {
     const existingS3System = await S3System.findOne({ _id: s3System });
 
     if (!existingS3System) {
-      return res.status(400).json({ message: 'There are no S3System settings available for this type' });
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
     }
 
     let s3;
-    
+
     const params = {
       Bucket: bucketName,
     };
@@ -41,10 +43,12 @@ export const createBucket = async (req: Request, res: Response) => {
       await s3.makeBucket(`${bucketName.toLowerCase()}`);
     }
 
-    res.status(201).json({ message: 'Bucket created' });
+    res.status(201).json({ message: "Bucket created" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: `Error creating bucket: ${error.message}` });
+    res
+      .status(500)
+      .json({ message: `Error creating bucket: ${error.message}` });
   }
 };
 
@@ -55,7 +59,9 @@ export const getBuckets = async (req: Request, res: Response) => {
     const existingS3System = await S3System.findOne({ _id: s3System });
 
     if (!existingS3System) {
-      return res.status(400).json({ message: 'There are no S3System settings available for this type' });
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
     }
 
     let s3, buckets;
@@ -83,18 +89,21 @@ export const getBuckets = async (req: Request, res: Response) => {
 
     return res.status(200).json(buckets);
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch resources' });
+    return res.status(500).json({ error: "Failed to fetch resources" });
   }
 };
 
 export const getBucketsByUser = async (req: Request, res: Response) => {
   try {
-    const { s3System, userId } = req.query;
+    const { s3System } = req.query;
+    const user = req.user;
 
     const existingS3System = await S3System.findOne({ _id: s3System });
 
     if (!existingS3System) {
-      return res.status(400).json({ message: 'There are no S3System settings available for this type' });
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
     }
 
     let s3, buckets;
@@ -118,17 +127,25 @@ export const getBucketsByUser = async (req: Request, res: Response) => {
       });
 
       buckets = await s3.listBuckets();
+
+      if (user?.role === "admin") {
+        return res.status(200).json(buckets);
+      }
     }
 
-    const accessPolicies = await AccessPolicy.find({ s3System: s3System, user: userId });
+    const accessPolicies = await AccessPolicy.find({
+      s3System: s3System,
+      user: user._id,
+    });
 
     const filteredBuckets = [];
 
     for (const bucket of buckets) {
-      const hasReadPermission = accessPolicies.some(policy => {
+      const hasReadPermission = accessPolicies.some((policy) => {
         return (
           policy.resourceName === bucket.name &&
-          (policy?.permissions === Permissions.READ || policy?.permissions === Permissions.READ_WRITE)
+          (policy?.permissions === Permissions.READ ||
+            policy?.permissions === Permissions.READ_WRITE)
         );
       });
 
@@ -139,24 +156,33 @@ export const getBucketsByUser = async (req: Request, res: Response) => {
     return res.status(200).json(filteredBuckets);
   } catch (error) {
     console.log(error.message);
-    
-    return res.status(500).json({ error: 'Failed to fetch resources' + error.message});
+
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch resources: " + error.message });
   }
 };
 
 export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
   try {
     const { s3System, userId, bucketName, prefix } = req.query;
+    console.log(s3System);
+    const user = req.user;
 
     const existingS3System = await S3System.findOne({ _id: s3System });
 
     if (!existingS3System) {
-      return res.status(400).json({ message: 'There are no S3System settings available for this type' });
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
     }
 
     let s3 = S3Client(existingS3System);
 
-    const accessPolicies = await AccessPolicy.find({ s3System: s3System, user: userId });
+    const accessPolicies = await AccessPolicy.find({
+      s3System: s3System,
+      user: userId,
+    });
 
     let filteredObjects = [];
 
@@ -164,44 +190,58 @@ export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
       filteredObjects = await s3?.listObjectsV2({ Bucket: bucketName });
     } else if (existingS3System.type === S3SystemType.S3Compatible) {
       const objectStream = s3.listObjectsV2(bucketName, prefix);
-      
-      objectStream.on('data', (object) => {
-        const isAccessibleForAllObjects = accessPolicies.some(policy => {
-          return (policy.resourceName === bucketName && (policy?.permissions === Permissions.READ_WRITE || policy.permissions === Permissions.READ) && policy.path === '*');
-        });
 
-        if(isAccessibleForAllObjects) {
+      objectStream.on("data", (object) => {
+        if (user?.role === "admin") {
           filteredObjects.push(object);
-          return;
-        }
+        } else {
+          const isAccessibleForAllObjects = accessPolicies.some((policy) => {
+            return (
+              policy.resourceName === bucketName &&
+              (policy?.permissions === Permissions.READ_WRITE ||
+                policy.permissions === Permissions.READ) &&
+              policy.path === "*"
+            );
+          });
 
-        const isAccessible = accessPolicies.some(policy => {
-          return (
-            policy.resourceName === bucketName &&
-            (policy.permissions === Permissions.READ_WRITE ||
-              policy.permissions === Permissions.READ) &&
-              (policy.path !== '*' &&
-                object.name?.startsWith(policy.path) || object.prefix?.startsWith(policy.path)));
-        });
+          if (isAccessibleForAllObjects) {
+            filteredObjects.push(object);
+            return;
+          }
 
-        if (isAccessible) {
-          filteredObjects.push(object);
+          const isAccessible = accessPolicies.some((policy) => {
+            return (
+              policy.resourceName === bucketName &&
+              (policy.permissions === Permissions.READ_WRITE ||
+                policy.permissions === Permissions.READ) &&
+              ((policy.path !== "*" && object.name?.startsWith(policy.path)) ||
+                object.prefix?.startsWith(policy.path))
+            );
+          });
+
+          if (isAccessible) {
+            filteredObjects.push(object);
+          }
         }
       });
-      
-      objectStream.on('end', () => {
-        console.log(filteredObjects);
+
+      objectStream.on("end", () => {
+        console.log("filteredObjects", filteredObjects);
         return res.status(200).json(filteredObjects);
       });
-      
-      objectStream.on('error', (error) => {
-        console.error('Error reading objects:', error);
-        return res.status(500).json({ error: 'Failed to fetch resources ' + error.message });
+
+      objectStream.on("error", (error) => {
+        console.error("Error reading objects:", error);
+        return res
+          .status(500)
+          .json({ error: "Failed to fetch resources " + error.message });
       });
     }
   } catch (error) {
     console.log(error.message);
-    return res.status(500).json({ error: 'Failed to fetch resources ' + error.message });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch resources " + error.message });
   }
 };
 
@@ -214,24 +254,34 @@ export const downloadObject = async (req: Request, res: Response) => {
       objectKey: string;
     };
 
-    const accessPolicies = await AccessPolicy.find({ s3System: s3System, user: userId });
+    const user = req.user;
 
-    const isAccessible = accessPolicies.some(policy => {
-      return (
-        policy.resourceName === bucketName &&
-        (policy.permissions === Permissions.READ_WRITE || policy.permissions === Permissions.READ) &&
-        (policy.path === '*' || objectKey.startsWith(policy.path))
-      );
-    });
+    if (user?.role !== "admin") {
+      const accessPolicies = await AccessPolicy.find({
+        s3System: s3System,
+        user: userId,
+      });
 
-    if (!isAccessible) {
-      return res.status(403).json({ message: 'Access denied' });
+      const isAccessible = accessPolicies.some((policy) => {
+        return (
+          policy.resourceName === bucketName &&
+          (policy.permissions === Permissions.READ_WRITE ||
+            policy.permissions === Permissions.READ) &&
+          (policy.path === "*" || objectKey.startsWith(policy.path))
+        );
+      });
+
+      if (!isAccessible) {
+        return res.status(403).json({ message: "Access denied" });
+      }
     }
 
     const existingS3System = await S3System.findOne({ _id: s3System });
 
     if (!existingS3System) {
-      return res.status(400).json({ message: 'There are no S3System settings available for this type' });
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
     }
 
     let s3 = S3Client(existingS3System);
@@ -249,8 +299,8 @@ export const downloadObject = async (req: Request, res: Response) => {
     } else if (existingS3System.type === S3SystemType.S3Compatible) {
       s3.fGetObject(bucketName, objectKey, objectKey, (err: any) => {
         if (err) {
-          console.error('Error downloading object:', err);
-          return res.status(500).json({ error: 'Failed to download object' });
+          console.error("Error downloading object:", err);
+          return res.status(500).json({ error: "Failed to download object" });
         }
 
         res.attachment(objectKey);
@@ -259,13 +309,15 @@ export const downloadObject = async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error(error.message);
-    return res.status(500).json({ error: 'Failed to fetch resources ' + error.message });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch resources " + error.message });
   }
 };
 
 export const uploadObject = async (req: Request, res: Response) => {
   if (!req.file) {
-    return res.status(400).json({ message: 'No file uploaded' });
+    return res.status(400).json({ message: "No file uploaded" });
   }
 
   try {
@@ -274,7 +326,9 @@ export const uploadObject = async (req: Request, res: Response) => {
 
     const existingS3System = await S3System.findOne({ _id: s3System });
     if (!existingS3System) {
-      return res.status(400).json({ message: 'There are no S3System settings available for this type' });
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
     }
 
     let s3;
@@ -293,21 +347,109 @@ export const uploadObject = async (req: Request, res: Response) => {
         endPoint: existingS3System.endpoint,
         accessKey: existingS3System.accessKey,
         secretKey: existingS3System.secretKey,
-        partSize: 1024 * 1024 * 64, 
+        partSize: 1024 * 1024 * 64,
       });
     }
 
-    await s3.putObject(bucketName,
+    await s3.putObject(
+      bucketName,
       `${prefix ? prefix : ""}${originalname}`,
-      require('fs').createReadStream(path),
+      require("fs").createReadStream(path),
       "application/octet-stream"
-      ); 
+    );
 
-    require('fs').unlinkSync(path);
+    require("fs").unlinkSync(path);
 
-    res.status(200).json({ message: 'File uploaded successfully' });
+    res.status(200).json({ message: "File uploaded successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to upload the file' });
+    res.status(500).json({ message: "Failed to upload the file" });
+  }
+};
+
+export const previewObject = async (req: Request, res: Response) => {
+  try {
+    const { s3System, userId, bucketName, objectKey } = req.query as {
+      s3System: string;
+      userId: string;
+      bucketName: string;
+      objectKey: string;
+    };
+
+    const user = req.user;
+
+    if (user?.role !== "admin") {
+      const accessPolicies = await AccessPolicy.find({
+        s3System: s3System,
+        user: userId,
+      });
+
+      const isAccessible = accessPolicies.some((policy) => {
+        return (
+          policy.resourceName === bucketName &&
+          (policy.permissions === Permissions.READ_WRITE ||
+            policy.permissions === Permissions.READ) &&
+          (policy.path === "*" || objectKey.startsWith(policy.path))
+        );
+      });
+
+      if (!isAccessible) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+    }
+
+    const existingS3System = await S3System.findOne({ _id: s3System });
+
+    if (!existingS3System) {
+      return res.status(400).json({
+        message: "There are no S3System settings available for this type",
+      });
+    }
+
+    let s3 = S3Client(existingS3System);
+
+    if (existingS3System.type === S3SystemType.AmazonS3) {
+      const params = {
+        Bucket: bucketName,
+        Key: objectKey,
+      };
+
+      const data = await s3.getObject(params).promise();
+
+      res.status(200).json({ data: data.Body.toString("base64") });
+    } else if (existingS3System.type === S3SystemType.S3Compatible) {
+      const objectStream = await s3.getObject(
+        bucketName,
+        objectKey,
+        function (err, dataStream) {
+          if (err) {
+            console.log("err", err);
+            return res.status(500).json({ error: "Failed to preview object" });
+          }
+          const chunks = [];
+          dataStream.on("data", function (chunk) {
+            chunks.push(chunk);
+          });
+          dataStream.on("end", () => {
+            console.log("Finished streaming object");
+            res.status(200).json(chunks);
+          });
+
+          dataStream.on("error", (error) => {
+            console.error("Error streaming object:", error);
+            res.status(500).json({ error: "Failed to stream object" });
+          });
+
+          dataStream.on("close", () => {
+            console.log("Closed object stream");
+          });
+        }
+      );
+    }
+  } catch (error) {
+    console.error(error.message);
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch resources " + error.message });
   }
 };
