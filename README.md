@@ -1,6 +1,8 @@
 # S3 User Management Backend API ###
 This is the backend API for managing users and their access to Amazon S3 or S3 Compatible systems. The API provides endpoints for user creation, listing users, creating and managing S3 systems, assigning access policies, and performing various S3-related operations.
 
+For more detailed information about the API endpoints and usage, please refer to the http://IP:PORT/api-docs/.
+
 ## Table of Contents ##
 * Endpoints
   * Create User
