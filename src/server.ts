@@ -12,6 +12,9 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import compression from 'compression';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import swaggerOptions from './swaggerOptions';
 
 import resourceRoutes from './routes/resource.routes';
 import auth from './routes/auth';
@@ -31,6 +34,8 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
+const specs = swaggerJsdoc(swaggerOptions);
+
 app.use(cors(corsOptions));
 app.use(compression());
 app.use(cookieParser());
@@ -46,7 +51,8 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/buckets', bucketRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/s3-systems', s3SystemRoutes);
+app.use('/api/s3systems', s3SystemRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "http://localhost:3000");

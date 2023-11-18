@@ -6,6 +6,38 @@ import AccessPolicy from "../models/access-policy";
 import { Permissions } from "../interface/permissions";
 import { S3Client } from "../config/s3client";
 
+
+/**
+ * @swagger
+ * /api/buckets/create:
+ *   post:
+ *     summary: Create a new bucket.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               bucketName:
+ *                 type: string
+ *               s3System:
+ *                 type: string
+ *             required:
+ *               - bucketName
+ *               - s3System
+ *     responses:
+ *       201:
+ *         description: Bucket created successfully.
+ *       400:
+ *         description: Bad Request. S3System settings not available for this type.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export const createBucket = async (req: Request, res: Response) => {
   try {
     const { bucketName, s3System } = req.body;
@@ -52,6 +84,28 @@ export const createBucket = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/buckets/list:
+ *   get:
+ *     summary: Get a list of buckets.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: s3System
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of buckets.
+ *       400:
+ *         description: Bad Request. S3System settings not available for this type.
+ *       500:
+ *         description: Internal Server Error.
+ */ 
 export const getBuckets = async (req: Request, res: Response) => {
   try {
     const { s3System } = req.query;
@@ -93,6 +147,30 @@ export const getBuckets = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/buckets/list-by-user:
+ *   get:
+ *     summary: Get a list of buckets accessible by the user.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: s3System
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of accessible buckets.
+ *       400:
+ *         description: Bad Request. S3System settings not available for this type.
+ *       403:
+ *         description: Forbidden. Access denied.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export const getBucketsByUser = async (req: Request, res: Response) => {
   try {
     const { s3System } = req.query;
@@ -163,9 +241,41 @@ export const getBucketsByUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/buckets/list-objects-by-user:
+ *   get:
+ *     summary: Get a list of objects in a bucket accessible by the user.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: s3System
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: bucketName
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: prefix
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of accessible objects in the bucket.
+ *       400:
+ *         description: Bad Request. S3System settings not available for this type.
+ *       403:
+ *         description: Forbidden. Access denied.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
   try {
-    const { s3System, userId, bucketName, prefix } = req.query;
+    const { s3System, bucketName, prefix } = req.query;
     console.log(s3System);
     const user = req.user;
 
@@ -181,7 +291,7 @@ export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
 
     const accessPolicies = await AccessPolicy.find({
       s3System: s3System,
-      user: userId,
+      user: user._id,
     });
 
     let filteredObjects = [];
@@ -245,11 +355,42 @@ export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/buckets/download:
+ *   get:
+ *     summary: Download an object from a bucket.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: s3System
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: bucketName
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: objectKey
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Object downloaded successfully.
+ *       400:
+ *         description: Bad Request. S3System settings not available for this type.
+ *       403:
+ *         description: Forbidden. Access denied.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export const downloadObject = async (req: Request, res: Response) => {
   try {
-    const { s3System, userId, bucketName, objectKey } = req.query as {
+    const { s3System, bucketName, objectKey } = req.query as {
       s3System: string;
-      userId: string;
       bucketName: string;
       objectKey: string;
     };
@@ -259,7 +400,7 @@ export const downloadObject = async (req: Request, res: Response) => {
     if (user?.role !== "admin") {
       const accessPolicies = await AccessPolicy.find({
         s3System: s3System,
-        user: userId,
+        user: user._id,
       });
 
       const isAccessible = accessPolicies.some((policy) => {
@@ -315,6 +456,43 @@ export const downloadObject = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/buckets/upload:
+ *   post:
+ *     summary: Upload an object to a bucket.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               s3System:
+ *                 type: string
+ *               bucketName:
+ *                 type: string
+ *               prefix:
+ *                 type: string
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *             required:
+ *               - s3System
+ *               - bucketName
+ *               - file
+ *     responses:
+ *        200:
+ *          description: File uploaded successfully.
+ *        400:
+ *          description: Bad Request. S3System settings not available for this type.
+ *        500:
+ *          description: Internal Server Error.
+ */
 export const uploadObject = async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
@@ -367,11 +545,42 @@ export const uploadObject = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /api/buckets/preview:
+ *   get:
+ *     summary: Preview an object from a bucket.
+ *     tags:
+ *       - Buckets
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: s3System
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: bucketName
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: objectKey
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Object previewed successfully.
+ *       400:
+ *         description: Bad Request. S3System settings not available for this type.
+ *       403:
+ *         description: Forbidden. Access denied.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export const previewObject = async (req: Request, res: Response) => {
   try {
-    const { s3System, userId, bucketName, objectKey } = req.query as {
+    const { s3System, bucketName, objectKey } = req.query as {
       s3System: string;
-      userId: string;
       bucketName: string;
       objectKey: string;
     };
@@ -381,7 +590,7 @@ export const previewObject = async (req: Request, res: Response) => {
     if (user?.role !== "admin") {
       const accessPolicies = await AccessPolicy.find({
         s3System: s3System,
-        user: userId,
+        user: user._id,
       });
 
       const isAccessible = accessPolicies.some((policy) => {

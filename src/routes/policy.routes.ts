@@ -6,7 +6,7 @@ import { isAdmin } from '../middleware/isAdmin';
 
 const router = express.Router();
 
-router.post('/create', isAuthenticated, isAdmin, assignAccess);
-router.get('/list', isAuthenticated, isAdmin, getAssings);
+router.post('/assign', isAuthenticated, isAdmin, assignAccess);
+router.get('/assignments', isAuthenticated, isAdmin, getAssings);
 
 export default router;
