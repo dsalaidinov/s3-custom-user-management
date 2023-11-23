@@ -7,29 +7,23 @@ import { Message } from "primereact/message";
 import axiosClient from "../util/axiosClient";
 import { Container, Row, Col } from "react-grid-system";
 
-const EditUser = ({ user, policies, onClose, onUserUpdated }) => {
+const EditUser = ({ user, s3systems, onClose, onUserUpdated }) => {
   const [username, setUsername] = useState("");
-  const [selectedPolicies, setSelectedPolicies] = useState(null);
+  const [selectedS3Systems, setSelectedS3Systems] = useState(null);
   const [error, setError] = useState("");
-
+console.log(user);
   useEffect(() => {
-    setUsername(user.accessKey);
-    setSelectedPolicies(
-      user.policy && user.policy.length === 1 && user.policy[0] === ""
-        ? null
-        : user.policy || null
-    );
+    setUsername(user.username);
+    setSelectedS3Systems(user.s3systems);
   }, [user]);
 
   const handleUpdateUser = async () => {
     try {
       const updatedUser = {
-        entityName: user.accessKey,
-        entityType: "user",
-        name: selectedPolicies,
+        s3systems: selectedS3Systems,
       };
 
-      await axiosClient.put(`set-policy`, updatedUser);
+      await axiosClient.put(`/users/update/${user._id}`, updatedUser);
       onUserUpdated();
       onClose();
     } catch (error) {
@@ -38,8 +32,9 @@ const EditUser = ({ user, policies, onClose, onUserUpdated }) => {
     }
   };
 
-  const handleChangePolicies = (e) => {
-    setSelectedPolicies(e.value);
+  const handleChangeS3Policies = (e) => {
+    console.log(e);
+    setSelectedS3Systems(e.value);
   };
 
   return (
@@ -78,17 +73,19 @@ const EditUser = ({ user, policies, onClose, onUserUpdated }) => {
           </Row>
 
           <div className="p-field" style={{ marginBottom: "1rem" }}>
-            <label htmlFor="policies">Policies</label>
+            <label htmlFor="s3systems">S3 Systems</label>
             <MultiSelect
-              id="policies"
+              id="s3systems"
               filter
-              value={selectedPolicies}
-              options={policies?.map((policy) => policy.name)}
-              onChange={handleChangePolicies}
+              value={selectedS3Systems}
+              options={s3systems}
+              optionValue="_id"
+              optionLabel="name"
+              onChange={handleChangeS3Policies}
               placeholder={
-                selectedPolicies?.length > 0
-                  ? "Select policies"
-                  : "No policies found"
+                s3systems?.length > 0
+                  ? "Select s3 system"
+                  : "No s3 system found"
               }
               maxSelectedLabels={3}
               className="w-full md:w-20rem"

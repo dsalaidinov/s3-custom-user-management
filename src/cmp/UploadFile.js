@@ -47,13 +47,14 @@ const UploadFile = ({ bucketName, pathPrefix = "", onRefresh, visible, setOpened
               'Content-Type': 'multipart/form-data',
             },
             onUploadProgress: (progressEvent) => {
-              const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+              const progress = parseInt(Math.round((progressEvent.loaded * 100) / progressEvent.total));
               setUploadProgress(progress);
             },
           });
 
           showSuccess(`Successfully uploaded ${filesList.length} file(s)`);
           onRefresh();
+          handleOnHide();
         })
       );
     } catch (error) {

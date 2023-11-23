@@ -132,18 +132,24 @@ export const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-export const getFileData = async (bucket, path, s3System, userId, callback) => {
+export const getFileData = async (bucket, path, s3System, userId, callback, progressCallback) => {
   try {
     const response = await axiosClient.get(`/buckets/preview`, {
       params: {
         bucketName: bucket,
         objectKey: path,
         userId,
-        s3System
+        s3System,
+      },
+      onDownloadProgress: (progressEvent) => {
+        console.log(progressEvent);
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        console.log(progress);
+        progressCallback(progress);
       },
     });
 
-    const uint8Array = new Uint8Array(response?.data?.map(chunk => chunk.data).flat());
+    const uint8Array = new Uint8Array(response?.data?.map((chunk) => chunk.data).flat());
     const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
 
     if (path.endsWith('.txt')) {
@@ -153,11 +159,31 @@ export const getFileData = async (bucket, path, s3System, userId, callback) => {
         callback(textData);
       };
       reader.readAsText(blob);
-    } else {
+    } else if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png') || path.endsWith('.gif')) {
       const url = URL.createObjectURL(blob);
       const image = document.getElementById('preview');
       if (image) {
         image.src = url;
+      }
+    } else if (path.endsWith('.mp4') || path.endsWith('.avi')) {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.src = URL.createObjectURL(blob);
+      const container = document.getElementById('previewVideoContainer');
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(video);
+      }
+    } else if (path.endsWith('.pdf')) {
+      const embed = document.createElement('embed');
+      embed.src = URL.createObjectURL(blob);
+      embed.type = 'application/pdf';
+      embed.width = '100%';
+      embed.height = '100%';
+      const container = document.getElementById('previewContainer');
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(embed);
       }
     }
   } catch (error) {

@@ -26,7 +26,7 @@ const ListBuckets = () => {
     const res = await axiosClient.get(`/buckets/list-by-user?s3System=${system}`);
     setBuckets(res.data);
     } catch (error) {
-      error && showError("Error: ", error?.error);
+      error && showError("Error");
     }
   };
 

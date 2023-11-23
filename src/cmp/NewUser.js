@@ -14,8 +14,8 @@ const NewUser = ({ visible, onHide, onUserCreated }) => {
   const [selectedPolicies, setSelectedPolicies] = useState(null);
   const [selectedGroups, setSelectedGroups] = useState(null);
   const [formData, setFormData] = useState({
-    accesskey: "",
-    secretkey: "",
+    username: "",
+    password: "",
     policies: [],
     groups: [],
   });
@@ -54,10 +54,8 @@ const NewUser = ({ visible, onHide, onUserCreated }) => {
 
   const handleHide = () => {
     setFormData({
-      accesskey: "",
-      secretkey: "",
-      policies: [],
-      groups: [],
+      username: "",
+      password: "",
     });
     onHide();
     setError("");
@@ -70,19 +68,12 @@ const NewUser = ({ visible, onHide, onUserCreated }) => {
     e.preventDefault();
 
     try {
-      await axiosClient.post("/users", {
-        ...formData,
-        policies: selectedPolicies
-          ? selectedPolicies.map((policy) => policy.name)
-          : [""],
-      });
+      await axiosClient.post("/users/create", formData);
       onHide();
       onUserCreated();
       setFormData({
-        accesskey: "",
-        secretkey: "",
-        policies: [],
-        groups: [],
+        username: "",
+        password: "",
       });
       setError("");
       showSuccess(`User created successfully!`);
@@ -122,56 +113,26 @@ const NewUser = ({ visible, onHide, onUserCreated }) => {
       >
         <form onSubmit={onSubmit} className="p-fluid">
           <div className="p-field" style={{ marginBottom: "1rem" }}>
-            <label htmlFor="accesskey">Username (access key)*</label>
+            <label htmlFor="username">Username*</label>
             <InputText
               required={false}
-              id="accesskey"
-              value={formData.accesskey}
+              id="username"
+              value={formData.username}
               onChange={(e) =>
-                setFormData({ ...formData, accesskey: e.target.value })
+                setFormData({ ...formData, username: e.target.value })
               }
             />
           </div>
 
           <div className="p-field" style={{ marginBottom: "1rem" }}>
-            <label htmlFor="secretkey">Password (secret key)*</label>
+            <label htmlFor="password">Password*</label>
             <Password
-              id="secretkey"
-              value={formData.secretkey}
+              id="password"
+              value={formData.password}
               onChange={(e) =>
-                setFormData({ ...formData, secretkey: e.target.value })
+                setFormData({ ...formData, password: e.target.value })
               }
               toggleMask
-            />
-          </div>
-
-          <div
-            className="card flex justify-content-center"
-            style={{ marginBottom: "1rem" }}
-          >
-            <MultiSelect
-              filter
-              value={selectedPolicies}
-              onChange={(e) => setSelectedPolicies(e.target.value)}
-              options={allPolicies}
-              optionLabel="name"
-              placeholder="Select policies"
-              maxSelectedLabels={3}
-              className="w-full md:w-20rem"
-            />
-          </div>
-
-          <div
-            className="card flex justify-content-center"
-            style={{ marginBottom: "1rem" }}
-          >
-            <MultiSelect
-              value={selectedGroups}
-              onChange={(e) => setSelectedGroups(e.target.value)}
-              options={allGroups}
-              placeholder="Select groups"
-              maxSelectedLabels={3}
-              className="w-full md:w-20rem"
             />
           </div>
           <div>{error && <Message severity="error" text={error} />}</div>

@@ -19,12 +19,24 @@ const ListUsers = () => {
   const [users, setUsers] = useState([]);
   const [buckets, setBuckets] = useState([]);
   const [policies, setPolicies] = useState(null);
+  const [s3systems, setS3Systems] = useState([]);
 
   useEffect(() => {
+    fetchS3Systems();
     fetchUsers();
-    fetchBuckets();
-    fetchPolicies();
+    // fetchBuckets();
+    // fetchPolicies();
   }, []);
+
+  const fetchS3Systems = async () => {
+    try {
+      const response = await axiosClient.get("/s3systems/list");
+      const fetchedS3Systems = response.data;
+      setS3Systems(fetchedS3Systems);
+    } catch (error) {
+      console.error("Error fetching S3 systems:", error);
+    }
+  };
 
   const fetchBuckets = async () => {
     const res = await mc.listBuckets();
@@ -43,8 +55,8 @@ const ListUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axiosClient.get("/users");
-      const fetchedUsers = response.data.users;
+      const response = await axiosClient.get("/users/list");
+      const fetchedUsers = response.data;
       setUsers(fetchedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -97,8 +109,19 @@ const ListUsers = () => {
     );
   };
 
-  const statusBodyTemplate = (rowData) => {
-    return <Tag value={rowData.status} severity={getStatus(rowData)}></Tag>;
+  // const statusBodyTemplate = (rowData) => {
+  //   return <Tag value={rowData.status} severity={getStatus(rowData)}></Tag>;
+  // };
+
+  const S3SystemsBodyTemplate = (rowData) => {
+    console.log(rowData);
+    const systemIds = rowData.s3systems;
+    const systemNames = systemIds?.map(id => {
+      const system = s3systems.find(s => s._id === id);
+      return system ? <Tag value={system?.name} className="mr-1"></Tag> : '';
+    });
+
+  return systemNames;
   };
 
   const getStatus = (user) => {
@@ -153,9 +176,9 @@ const ListUsers = () => {
           size="small"
           className="p-datatable-striped"
         >
-          <Column field="accessKey" sortable style={{ width: '25%' }} header="Username"></Column>
+          <Column field="username" sortable style={{ width: '25%' }} header="Username"></Column>
           {/* <Column field="policy" header="Policies"></Column>*/}
-          <Column field="status" sortable header="Status" body={statusBodyTemplate} style={{ minWidth: '50rem' }}></Column> 
+          <Column field="s3systems" sortable header="S3 Systems" body={S3SystemsBodyTemplate} style={{ minWidth: '50rem' }}></Column> 
           <Column header="Actions" body={renderActions} style={{ minWidth: '10rem' }}></Column>
         </DataTable>
 
@@ -169,7 +192,7 @@ const ListUsers = () => {
           <EditUser
             user={selectedUser}
             buckets={buckets}
-            policies={policies}
+            s3systems={s3systems}
             onClose={handleCloseEdit}
             onUserUpdated={onUserUpdated}
           />
