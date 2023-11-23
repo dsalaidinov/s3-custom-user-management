@@ -16,7 +16,6 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import swaggerOptions from './swaggerOptions';
 
-import resourceRoutes from './routes/resource.routes';
 import auth from './routes/auth';
 import bucketRoutes from './routes/bucket.routes';
 import policyRoutes from './routes/policy.routes';
@@ -47,7 +46,6 @@ app.use(bodyParser.json());
 // mongoose.set('useCreateIndex', true);
 
 app.use('/api/auth', auth);
-app.use('/api/resources', resourceRoutes);
 app.use('/api/buckets', bucketRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/users', userRoutes);

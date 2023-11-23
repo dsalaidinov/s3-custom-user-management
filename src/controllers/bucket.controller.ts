@@ -636,12 +636,17 @@ export const previewObject = async (req: Request, res: Response) => {
             return res.status(500).json({ error: "Failed to preview object" });
           }
           const chunks = [];
+          let fileSize = 0;
+
           dataStream.on("data", function (chunk) {
             chunks.push(chunk);
+            fileSize += chunk.length;
           });
           dataStream.on("end", () => {
             console.log("Finished streaming object");
+            res.setHeader('Content-Length', fileSize);
             res.status(200).json(chunks);
+            res.end();
           });
 
           dataStream.on("error", (error) => {
