@@ -36,7 +36,7 @@ For detailed information about the frontend interface, including installation an
 ### Steps
 1. Clone the repository.
     ```sh
-    git clone [https://github.com/dsalaidinov/s3-custom-user-management.git]
+    git clone https://github.com/dsalaidinov/s3-custom-user-management.git
     cd yourrepository
     ```
 2. Install dependencies for both backend and frontend.
