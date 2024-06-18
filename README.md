@@ -22,7 +22,7 @@ The application consists of two main components:
 - **Frontend Interface**: Developed with React, communicates with the backend to provide an intuitive interface for managing S3 resources.
 
 ## Backend API
-For detailed information about the backend API, including endpoints and usage instructions, please refer to the [Backend README](backend/README.md).
+For detailed information about the backend API, including endpoints and usage instructions, please refer to the [backend/README.md](https://github.com/dsalaidinov/s3-custom-user-management/tree/backend?tab=readme-ov-file).
 
 ## Frontend Interface
 For detailed information about the frontend interface, including installation and configuration instructions, please refer to the [Frontend README](s3-browser/README.md).
