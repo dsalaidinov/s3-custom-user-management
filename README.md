@@ -25,7 +25,7 @@ The application consists of two main components:
 For detailed information about the backend API, including endpoints and usage instructions, please refer to the [backend/README.md](https://github.com/dsalaidinov/s3-custom-user-management/tree/backend?tab=readme-ov-file).
 
 ## Frontend Interface
-For detailed information about the frontend interface, including installation and configuration instructions, please refer to the [Frontend README](s3-browser/README.md).
+For detailed information about the frontend interface, including installation and configuration instructions, please refer to the [Frontend README](https://github.com/dsalaidinov/s3-custom-user-management/tree/s3-browser?tab=readme-ov-file).
 
 ## Installation
 ### Prerequisites
