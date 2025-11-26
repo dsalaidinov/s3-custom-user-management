@@ -12,7 +12,7 @@ export interface S3SystemDocument extends Document {
   secretKey: string;
   region?: string;
   endpoint?: string;
-  port?: string;
+  port?: number;
   useSSL?: boolean;
 }
 
@@ -23,7 +23,7 @@ const s3SystemSchema = new Schema<S3SystemDocument>({
   secretKey: { type: String, required: true },
   region: { type: String },
   endpoint: { type: String },
-  port: { type: String },
+  port: { type: Number },
   useSSL: { type: Boolean },
 });
 

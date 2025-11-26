@@ -5,6 +5,7 @@ import S3System, { S3SystemType } from "../models/s3systems";
 import AccessPolicy from "../models/access-policy";
 import { Permissions } from "../interface/permissions";
 import { S3Client } from "../config/s3client";
+import { vueFinderItems } from "../helpers/objectMapper";
 
 
 /**
@@ -105,7 +106,7 @@ export const createBucket = async (req: Request, res: Response) => {
  *         description: Bad Request. S3System settings not available for this type.
  *       500:
  *         description: Internal Server Error.
- */ 
+ */
 export const getBuckets = async (req: Request, res: Response) => {
   try {
     const { s3System } = req.query;
@@ -200,6 +201,7 @@ export const getBucketsByUser = async (req: Request, res: Response) => {
       s3 = new MinioClient({
         useSSL: existingS3System.useSSL,
         endPoint: existingS3System.endpoint,
+        port: existingS3System.port,
         accessKey: existingS3System.accessKey,
         secretKey: existingS3System.secretKey,
       });
@@ -273,87 +275,134 @@ export const getBucketsByUser = async (req: Request, res: Response) => {
  *       500:
  *         description: Internal Server Error.
  */
+// export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
+//   try {
+//     const { s3System, bucketName, prefix } = req.query;
+//     console.log(s3System);
+//     const user = req.user;
+
+//     const existingS3System = await S3System.findOne({ _id: s3System });
+
+//     if (!existingS3System) {
+//       return res.status(400).json({
+//         message: "There are no S3System settings available for this type",
+//       });
+//     }
+
+//     let s3 = S3Client(existingS3System);
+
+//     // const accessPolicies = await AccessPolicy.find({
+//     //   s3System: s3System,
+//     //   user: user._id,
+//     // });
+
+//     let filteredObjects = [];
+
+//     if (existingS3System.type === S3SystemType.AmazonS3) {
+//       filteredObjects = await s3?.listObjectsV2({ Bucket: bucketName });
+//     } else if (existingS3System.type === S3SystemType.S3Compatible) {
+//       const objectStream = s3.listObjectsV2(bucketName, prefix);
+
+//       objectStream.on("data", (object) => {
+//         filteredObjects.push(object);
+//         // if (user?.role === "admin") {
+//         //   filteredObjects.push(object);
+//         // } else {
+//         //   const isAccessibleForAllObjects = accessPolicies.some((policy) => {
+//         //     return (
+//         //       policy.resourceName === bucketName &&
+//         //       (policy?.permissions === Permissions.READ_WRITE ||
+//         //         policy.permissions === Permissions.READ) &&
+//         //       policy.path === "*"
+//         //     );
+//         //   });
+
+//         //   if (isAccessibleForAllObjects) {
+//         //     filteredObjects.push(object);
+//         //     return;
+//         //   }
+
+//         //   const isAccessible = accessPolicies.some((policy) => {
+//         //     return (
+//         //       policy.resourceName === bucketName &&
+//         //       (policy.permissions === Permissions.READ_WRITE ||
+//         //         policy.permissions === Permissions.READ) &&
+//         //       ((policy.path !== "*" && object.name?.startsWith(policy.path)) ||
+//         //         object.prefix?.startsWith(policy.path))
+//         //     );
+//         //   });
+
+//         //   if (isAccessible) {
+//         //     filteredObjects.push(object);
+//         //   }
+//         // }
+//       });
+
+//       objectStream.on("end", () => {
+//         console.log("filteredObjects", vueFinderItems(filteredObjects, prefix as string));
+
+//         return res.status(200).json(vueFinderItems(filteredObjects, prefix as string));
+//       });
+
+//       objectStream.on("error", (error) => {
+//         console.error("Error reading objects:", error);
+//         return res
+//           .status(500)
+//           .json({ error: "Failed to fetch resources " + error.message });
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error.message);
+//     return res
+//       .status(500)
+//       .json({ error: "Failed to fetch resources " + error.message });
+//   }
+// };
+
+
 export const getObjectsInBucketByUser = async (req: Request, res: Response) => {
   try {
-    const { s3System, bucketName, prefix } = req.query;
-    console.log(s3System);
+    const { s3System, bucketName } = req.query;
+
+    // безопасно обрабатываем prefix
+    let prefixRaw = req.query.prefix;
+    if (Array.isArray(prefixRaw)) prefixRaw = prefixRaw[0];
+    if (typeof prefixRaw !== "string") prefixRaw = "";
+    const prefixValue = prefixRaw.replace(/^.*path=/, ""); // пустая строка для корня
+
     const user = req.user;
 
     const existingS3System = await S3System.findOne({ _id: s3System });
-
     if (!existingS3System) {
-      return res.status(400).json({
-        message: "There are no S3System settings available for this type",
-      });
+      return res.status(400).json({ message: "There are no S3System settings available for this type" });
     }
 
     let s3 = S3Client(existingS3System);
-
-    const accessPolicies = await AccessPolicy.find({
-      s3System: s3System,
-      user: user._id,
-    });
-
-    let filteredObjects = [];
+    let filteredObjects: any[] = [];
 
     if (existingS3System.type === S3SystemType.AmazonS3) {
-      filteredObjects = await s3?.listObjectsV2({ Bucket: bucketName });
+      filteredObjects = await s3?.listObjectsV2({ Bucket: bucketName, Prefix: prefixValue });
+      return res.status(200).json(vueFinderItems(filteredObjects, prefixValue));
     } else if (existingS3System.type === S3SystemType.S3Compatible) {
-      const objectStream = s3.listObjectsV2(bucketName, prefix);
+      const objectStream = s3.listObjectsV2(bucketName, prefixValue);
 
-      objectStream.on("data", (object) => {
-        if (user?.role === "admin") {
-          filteredObjects.push(object);
-        } else {
-          const isAccessibleForAllObjects = accessPolicies.some((policy) => {
-            return (
-              policy.resourceName === bucketName &&
-              (policy?.permissions === Permissions.READ_WRITE ||
-                policy.permissions === Permissions.READ) &&
-              policy.path === "*"
-            );
-          });
-
-          if (isAccessibleForAllObjects) {
-            filteredObjects.push(object);
-            return;
-          }
-
-          const isAccessible = accessPolicies.some((policy) => {
-            return (
-              policy.resourceName === bucketName &&
-              (policy.permissions === Permissions.READ_WRITE ||
-                policy.permissions === Permissions.READ) &&
-              ((policy.path !== "*" && object.name?.startsWith(policy.path)) ||
-                object.prefix?.startsWith(policy.path))
-            );
-          });
-
-          if (isAccessible) {
-            filteredObjects.push(object);
-          }
-        }
-      });
+      objectStream.on("data", (object) => filteredObjects.push(object));
 
       objectStream.on("end", () => {
-        console.log("filteredObjects", filteredObjects);
-        return res.status(200).json(filteredObjects);
+        return res.status(200).json(vueFinderItems(filteredObjects, prefixValue));
       });
 
       objectStream.on("error", (error) => {
         console.error("Error reading objects:", error);
-        return res
-          .status(500)
-          .json({ error: "Failed to fetch resources " + error.message });
+        return res.status(500).json({ error: "Failed to fetch resources " + error.message });
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(error.message);
-    return res
-      .status(500)
-      .json({ error: "Failed to fetch resources " + error.message });
+    return res.status(500).json({ error: "Failed to fetch resources " + error.message });
   }
 };
+
 
 /**
  * @swagger
@@ -395,27 +444,27 @@ export const downloadObject = async (req: Request, res: Response) => {
       objectKey: string;
     };
 
-    const user = req.user;
+    // const user = req.user;
 
-    if (user?.role !== "admin") {
-      const accessPolicies = await AccessPolicy.find({
-        s3System: s3System,
-        user: user._id,
-      });
+    // if (user?.role !== "admin") {
+    //   const accessPolicies = await AccessPolicy.find({
+    //     s3System: s3System,
+    //     user: user._id,
+    //   });
 
-      const isAccessible = accessPolicies.some((policy) => {
-        return (
-          policy.resourceName === bucketName &&
-          (policy.permissions === Permissions.READ_WRITE ||
-            policy.permissions === Permissions.READ) &&
-          (policy.path === "*" || objectKey.startsWith(policy.path))
-        );
-      });
+    //   const isAccessible = accessPolicies.some((policy) => {
+    //     return (
+    //       policy.resourceName === bucketName &&
+    //       (policy.permissions === Permissions.READ_WRITE ||
+    //         policy.permissions === Permissions.READ) &&
+    //       (policy.path === "*" || objectKey.startsWith(policy.path))
+    //     );
+    //   });
 
-      if (!isAccessible) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-    }
+    //   if (!isAccessible) {
+    //     return res.status(403).json({ message: "Access denied" });
+    //   }
+    // }
 
     const existingS3System = await S3System.findOne({ _id: s3System });
 
@@ -438,15 +487,19 @@ export const downloadObject = async (req: Request, res: Response) => {
       res.attachment(objectKey);
       res.send(data.Body);
     } else if (existingS3System.type === S3SystemType.S3Compatible) {
-      s3.fGetObject(bucketName, objectKey, objectKey, (err: any) => {
-        if (err) {
-          console.error("Error downloading object:", err);
-          return res.status(500).json({ error: "Failed to download object" });
-        }
+      try {
+        const dataStream = await s3.getObject(bucketName, objectKey);
 
-        res.attachment(objectKey);
-        res.download(objectKey);
-      });
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${encodeURIComponent(objectKey.split("/").pop())}"`
+        );
+
+        dataStream.pipe(res);
+      } catch (err) {
+        console.error("Error downloading object:", err);
+        return res.status(500).json({ error: "Failed to download object" });
+      }
     }
   } catch (error) {
     console.error(error.message);
@@ -587,25 +640,25 @@ export const previewObject = async (req: Request, res: Response) => {
 
     const user = req.user;
 
-    if (user?.role !== "admin") {
-      const accessPolicies = await AccessPolicy.find({
-        s3System: s3System,
-        user: user._id,
-      });
+    // if (user?.role !== "admin") {
+    //   const accessPolicies = await AccessPolicy.find({
+    //     s3System: s3System,
+    //     user: user._id,
+    //   });
 
-      const isAccessible = accessPolicies.some((policy) => {
-        return (
-          policy.resourceName === bucketName &&
-          (policy.permissions === Permissions.READ_WRITE ||
-            policy.permissions === Permissions.READ) &&
-          (policy.path === "*" || objectKey.startsWith(policy.path))
-        );
-      });
+    //   const isAccessible = accessPolicies.some((policy) => {
+    //     return (
+    //       policy.resourceName === bucketName &&
+    //       (policy.permissions === Permissions.READ_WRITE ||
+    //         policy.permissions === Permissions.READ) &&
+    //       (policy.path === "*" || objectKey.startsWith(policy.path))
+    //     );
+    //   });
 
-      if (!isAccessible) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-    }
+    //   if (!isAccessible) {
+    //     return res.status(403).json({ message: "Access denied" });
+    //   }
+    // }
 
     const existingS3System = await S3System.findOne({ _id: s3System });
 
@@ -667,3 +720,75 @@ export const previewObject = async (req: Request, res: Response) => {
       .json({ error: "Failed to fetch resources " + error.message });
   }
 };
+
+export const searchObject = async (req: Request, res: Response) => {
+  try {
+    const { s3System, bucketName } = req.query as any;
+
+    let prefixRaw = req.query.prefix;
+    if (Array.isArray(prefixRaw)) prefixRaw = prefixRaw[0];
+    if (typeof prefixRaw !== "string") prefixRaw = "";
+    const prefix = prefixRaw.replace(/^.*path=/, "");
+
+    const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+
+    const existingS3System = await S3System.findOne({ _id: s3System });
+    if (!existingS3System) {
+      return res.status(400).json({ message: "There are no S3System settings available for this type" });
+    }
+
+    const s3 = S3Client(existingS3System);
+    let collectedObjects: any[] = [];
+
+    // ===== Amazon S3 =====
+    if (existingS3System.type === S3SystemType.AmazonS3) {
+      const result = await s3.listObjectsV2({
+        Bucket: bucketName,
+        Prefix: prefix,
+      }).promise();
+
+      collectedObjects = (result.Contents ?? [])
+        .filter((obj) => obj.Key?.toLowerCase().includes(q))
+        .map((obj) => ({
+          name: obj.Key,
+          size: obj.Size,
+          lastModified: obj.LastModified,
+        }));
+
+      return res.status(200).json(
+        vueFinderItems(collectedObjects, prefix, true) // 🔥 Включаем deep-режим
+      );
+    }
+
+    // ===== MinIO / S3-Compatible =====
+    if (existingS3System.type === S3SystemType.S3Compatible) {
+      const stream = s3.listObjectsV2(bucketName, prefix, true); // recursive=true
+
+      stream.on("data", (item) => {
+        const name = item.name || item.prefix;
+        if (!name || name.endsWith("/")) return; // exclude folders
+
+        if (name.toLowerCase().includes(q)) {
+          collectedObjects.push(item);
+        }
+      });
+
+      stream.on("end", () => {
+        return res.json(
+          vueFinderItems(collectedObjects, prefix, true) // 🔥 deep search
+        );
+      });
+
+      stream.on("error", (err) => {
+        console.error("Search error:", err);
+        return res.status(500).json({ error: "Search failed" });
+      });
+    }
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Failed to fetch resources: " + error.message,
+    });
+  }
+};
+

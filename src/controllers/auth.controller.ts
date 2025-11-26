@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as dotenv from "dotenv";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import User, { IUser } from "../models/user";
 
@@ -10,11 +10,11 @@ if (process.env.NODE_ENV === "development") {
   dotenv.config({ path: ".production.env" });
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_secret_sdjflgkldfjg";
+const JWT_SECRET = process.env.JWT_SECRET || "secret_secret_sdjflgkldfjg" as string;
 
 const generateToken = (user: IUser) => {
   const payload = { id: user._id, username: user.username };
-  const options = { expiresIn: "8h" };
+  const options: SignOptions = { expiresIn: "8h" };
   return jwt.sign(payload, JWT_SECRET, options);
 };
 
